@@ -7,7 +7,7 @@ app = FastAPI()
 
 config = {
     'user': 'root',
-    'password': 'yoloxdrdz',
+    'password': 'yoloxd',
     'host': 'localhost',
     'database': 'fastapi'
 }
