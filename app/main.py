@@ -1,37 +1,17 @@
-from fastapi import FastAPI, HTTPException, status
+from fastapi import FastAPI, HTTPException, status, Depends
 from pydantic import BaseModel
 import mysql.connector
+from app.database import engine, get_db
+from sqlalchemy.orm import Session
+from app import models
+from sqlalchemy import literal
+from app import schemas
+
+
+models.Base.metadata.create_all(bind=engine)
 
 
 app = FastAPI()
-
-config = {
-    'user': 'root',
-    'password': 'yoloxd',
-    'host': 'localhost',
-    'database': 'fastapi'
-}
-
-try:
-    connection = mysql.connector.connect(**config)
-    if connection.is_connected():
-        db_Info = connection.get_server_info()
-        print("Connected to MySQL Server version ", db_Info)
-        cursor = connection.cursor(dictionary=True)
-
-except mysql.connector.Error as err:
-    print(f"Error: {err}")
-"""finally: 
-    if connection is not None and connection.is_connected():
-        connection.close()
-        print("MySQL connection is closed")"""
-
-
-class Post(BaseModel):
-    title: str
-    content: str
-    published: bool = True
-    rating: int | None = None
 
 
 @app.get("/")
@@ -40,24 +20,23 @@ async def root():
 
 
 @app.post("/posts", status_code=status.HTTP_201_CREATED, tags=["posts"])
-async def create_posts(post: Post):
-    cursor.execute("INSERT INTO posts (title, content, published) VALUES (%s, %s, %s)",
-                   (post.title, post.content, post.published))
-    connection.commit()
-    # When we create a new post, we return the post created with the id.So we can use it later.
-    return {"data": post}
+async def create_posts(post: schemas.Post, db: Session = Depends(get_db)):
+    new_post = models.Posts(**post.model_dump())
+    db.add(new_post)
+    db.commit()
+    db.refresh(new_post)
+    return {"data": new_post}
 
 
 @app.get("/posts", tags=["posts"])
-async def get_posts():
-    cursor.execute("SELECT * FROM posts")
-    return {"data": cursor.fetchall()}
+async def get_posts(db: Session = Depends(get_db)):
+    posts = db.query(models.Posts).all()
+    return {"data": posts}
 
 
 @app.get("/posts/{post_id}", tags=["posts"])
-async def get_post(post_id: int):
-    cursor.execute("SELECT * FROM posts WHERE id = %s", [post_id])
-    r = cursor.fetchone()
+async def get_post(post_id: int, db: Session = Depends(get_db)):
+    r = db.query(models.Posts).filter(models.Posts.id == literal(post_id)).first()
     if not r:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
                             detail="Item not found",
@@ -66,30 +45,24 @@ async def get_post(post_id: int):
 
 
 @app.delete("/posts/{post_id}", status_code=status.HTTP_204_NO_CONTENT, tags=["posts"])
-async def delete_post(post_id: int):
-    cursor.execute("SELECT * FROM posts WHERE id = %s", [post_id])
-    r = cursor.fetchone()
-    if not r:
+async def delete_post(post_id: int, db: Session = Depends(get_db)):
+    r = db.query(models.Posts).filter(models.Posts.id == literal(post_id))
+    if not r.first():
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
                             detail="Item not found",
                             headers={"X-Error": "There goes my error"})
-
-    cursor.execute("DELETE FROM  posts WHERE id=%s", [post_id])
-    cursor.fetchone()
-    connection.commit()
+    r.delete(synchronize_session=False)
+    db.commit()
     return
 
 
 @app.put("/posts/{post_id}", tags=["posts"])
-async def update_post(post_id: int, updated_post: Post):
-    cursor.execute("SELECT * FROM posts WHERE id = %s", [post_id])
-    r = cursor.fetchone()
-    if not r:
+async def update_post(post_id: int, updated_post: schemas.Post, db: Session = Depends(get_db)):
+    post = db.query(models.Posts).filter(models.Posts.id == literal(post_id))
+    if not post.first():
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
                             detail="Item not found",
                             headers={"X-Error": "There goes my error"})
-    cursor.execute("UPDATE posts SET title = %s, content = %s, published = %s WHERE id = %s",
-                   [updated_post.title, updated_post.content, updated_post.published, post_id])
-    cursor.fetchone()
-    connection.commit()
-    return
+    post.update(updated_post.model_dump(), synchronize_session=False)
+    db.commit()
+    return {"data": db.query(models.Posts).filter(models.Posts.id == literal(post_id)).first()}
