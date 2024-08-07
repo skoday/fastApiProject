@@ -3,11 +3,10 @@ from app.database import engine, get_db
 from sqlalchemy.orm import Session
 from app import models
 from sqlalchemy import literal
-from app import schemas
+from app import schemas, utils
 
 
 models.Base.metadata.create_all(bind=engine)
-
 
 app = FastAPI()
 
@@ -26,7 +25,7 @@ async def create_posts(post: schemas.PostBase, db: Session = Depends(get_db)):
     return new_post
 
 
-@app.get("/posts", response_model= list[schemas.PostResponse], tags=["posts"])
+@app.get("/posts", response_model=list[schemas.PostResponse], tags=["posts"])
 async def get_posts(db: Session = Depends(get_db)):
     posts = db.query(models.Posts).all()
     return posts
@@ -64,3 +63,16 @@ async def update_post(post_id: int, updated_post: schemas.PostCreate, db: Sessio
     post.update(updated_post.model_dump(), synchronize_session=False)
     db.commit()
     return post.first()
+
+
+# Users
+@app.post("/users", status_code=status.HTTP_201_CREATED, response_model=schemas.UserOut, tags=["users"])
+async def create_user(user: schemas.CreateUser, db: Session = Depends(get_db)):
+    # hash the password
+    user.password = utils.hash_password(user.password)
+
+    new_user = models.Users(**user.model_dump())
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
+    return new_user
