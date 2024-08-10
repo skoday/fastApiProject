@@ -1,0 +1,65 @@
+from fastapi import HTTPException, status, Depends, APIRouter
+from app.database import get_db
+from sqlalchemy.orm import Session
+from app import models
+from sqlalchemy import literal, select, update
+from app import schemas
+
+
+router = APIRouter(
+    prefix="/posts",
+    tags=["Posts"]
+)
+
+
+@router.post("/", status_code=status.HTTP_201_CREATED, response_model=schemas.PostResponse)
+async def create_post(post: schemas.PostBase, db: Session = Depends(get_db)):
+    new_post = models.Posts(**post.model_dump())
+    db.add(new_post)
+    db.commit()
+    db.refresh(new_post)
+    return new_post
+
+
+@router.get("/")
+async def get_posts(db: Session = Depends(get_db)):
+    posts = db.execute(select(models.Posts)).scalars().all()
+    if not posts:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+                            detail="There are no posts available",
+                            headers={"X-Error": "There goes my error"})
+    return posts
+
+
+@router.get("/{post_id}", response_model=schemas.PostResponse)
+async def get_post(post_id: int, db: Session = Depends(get_db)):
+    r = db.get(models.Posts, post_id)
+    if not r:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+                            detail="Item not found",
+                            headers={"X-Error": "There goes my error"})
+    return r
+
+
+@router.delete("/{post_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_post(post_id: int, db: Session = Depends(get_db)):
+    r = db.get(models.Posts, post_id)
+    if not r:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+                            detail="Item not found",
+                            headers={"X-Error": "There goes my error"})
+    db.delete(r)
+    db.commit()
+    return
+
+
+@router.put("/{post_id}", response_model=schemas.PostResponse)
+async def update_post(post_id: int, updated_post: schemas.PostCreate, db: Session = Depends(get_db)):
+    post = db.get(models.Posts, post_id)
+    if not post:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+                            detail="Item not found",
+                            headers={"X-Error": "There goes my error"})
+    db.execute(update(models.Posts).where(models.Posts.id == literal(post_id)).values(**updated_post.model_dump()))
+    db.commit()
+    return post
