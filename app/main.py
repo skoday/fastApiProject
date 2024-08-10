@@ -2,7 +2,7 @@ from fastapi import FastAPI, HTTPException, status, Depends
 from app.database import engine, get_db
 from sqlalchemy.orm import Session
 from app import models
-from sqlalchemy import literal
+from sqlalchemy import literal, select, update
 from app import schemas, utils
 
 
@@ -25,15 +25,19 @@ async def create_posts(post: schemas.PostBase, db: Session = Depends(get_db)):
     return new_post
 
 
-@app.get("/posts", response_model=list[schemas.PostResponse], tags=["posts"])
+@app.get("/posts", tags=["posts"])
 async def get_posts(db: Session = Depends(get_db)):
-    posts = db.query(models.Posts).all()
+    posts = db.execute(select(models.Posts)).scalars().all()
+    if not posts:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+                            detail="There are no posts available",
+                            headers={"X-Error": "There goes my error"})
     return posts
 
 
 @app.get("/posts/{post_id}", response_model=schemas.PostResponse, tags=["posts"])
 async def get_post(post_id: int, db: Session = Depends(get_db)):
-    r = db.query(models.Posts).filter(models.Posts.id == literal(post_id)).first()
+    r = db.get(models.Posts, post_id)
     if not r:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
                             detail="Item not found",
@@ -43,26 +47,26 @@ async def get_post(post_id: int, db: Session = Depends(get_db)):
 
 @app.delete("/posts/{post_id}", status_code=status.HTTP_204_NO_CONTENT, tags=["posts"])
 async def delete_post(post_id: int, db: Session = Depends(get_db)):
-    r = db.query(models.Posts).filter(models.Posts.id == literal(post_id))
-    if not r.first():
+    r = db.get(models.Posts, post_id)
+    if not r:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
                             detail="Item not found",
                             headers={"X-Error": "There goes my error"})
-    r.delete(synchronize_session=False)
+    db.delete(r)
     db.commit()
     return
 
 
 @app.put("/posts/{post_id}", response_model=schemas.PostResponse, tags=["posts"])
 async def update_post(post_id: int, updated_post: schemas.PostCreate, db: Session = Depends(get_db)):
-    post = db.query(models.Posts).filter(models.Posts.id == literal(post_id))
-    if not post.first():
+    post = db.get(models.Posts, post_id)
+    if not post:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
                             detail="Item not found",
                             headers={"X-Error": "There goes my error"})
-    post.update(updated_post.model_dump(), synchronize_session=False)
+    db.execute(update(models.Posts).where(models.Posts.id == literal(post_id)).values(**updated_post.model_dump()))
     db.commit()
-    return post.first()
+    return post
 
 
 # Users
