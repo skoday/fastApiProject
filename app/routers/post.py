@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from app import models
 from sqlalchemy import literal, select, update
 from app import schemas, oauth2
+from typing import Any
 
 
 router = APIRouter(
@@ -14,7 +15,7 @@ router = APIRouter(
 
 @router.post("/", status_code=status.HTTP_201_CREATED, response_model=schemas.PostResponse)
 async def create_post(post: schemas.PostBase, db: Session = Depends(get_db),
-                      get_current_user: schemas.TokenData = Depends(oauth2.get_current_user)):
+                      current_user: models.Users = Depends(oauth2.get_current_user)) -> Any:
     new_post = models.Posts(**post.model_dump())
     db.add(new_post)
     db.commit()
@@ -23,7 +24,8 @@ async def create_post(post: schemas.PostBase, db: Session = Depends(get_db),
 
 
 @router.get("/")
-async def get_posts(db: Session = Depends(get_db), current_user: models.Users = Depends(oauth2.get_current_user)):
+async def get_posts(db: Session = Depends(get_db),
+                    current_user: models.Users = Depends(oauth2.get_current_user)):
     posts = db.execute(select(models.Posts)).scalars().all()
     if not posts:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
@@ -34,7 +36,7 @@ async def get_posts(db: Session = Depends(get_db), current_user: models.Users = 
 
 @router.get("/{post_id}", response_model=schemas.PostResponse)
 async def get_post(post_id: int, db: Session = Depends(get_db),
-                   current_user: models.Users = Depends(oauth2.get_current_user)):
+                   current_user: models.Users = Depends(oauth2.get_current_user)) -> Any:
     r = db.get(models.Posts, post_id)
     if not r:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
@@ -58,7 +60,7 @@ async def delete_post(post_id: int, db: Session = Depends(get_db),
 
 @router.put("/{post_id}", response_model=schemas.PostResponse)
 async def update_post(post_id: int, updated_post: schemas.PostCreate, db: Session = Depends(get_db),
-                      current_user: models.Users = Depends(oauth2.get_current_user)):
+                      current_user: models.Users = Depends(oauth2.get_current_user)) -> Any:
     post = db.get(models.Posts, post_id)
     if not post:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,

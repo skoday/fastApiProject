@@ -1,5 +1,5 @@
 from sqlalchemy import create_engine, TIMESTAMP
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.orm import DeclarativeBase
 from datetime import datetime
 
@@ -17,7 +17,7 @@ class Base(DeclarativeBase):
     }
 
 
-def get_db():
+def get_db() -> Session:
     db = SessionLocal()
     try:
         yield db
