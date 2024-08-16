@@ -12,11 +12,6 @@ class PostCreate(PostBase):
     pass
 
 
-class PostResponse(PostBase):
-    id: int
-    created_at: datetime
-
-
 class CreateUser(BaseModel):
     email: EmailStr
     password: str
@@ -26,6 +21,13 @@ class UserOut(BaseModel):
     id: int
     email: EmailStr
     created_at: datetime
+
+
+class PostResponse(PostBase):
+    id: int
+    created_at: datetime
+    # user_id: int
+    user: UserOut
 
 
 class UserLogin(BaseModel):
