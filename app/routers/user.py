@@ -14,9 +14,7 @@ router = APIRouter(
 
 @router.post("/", status_code=status.HTTP_201_CREATED, response_model=schemas.UserOut)
 async def create_user(user: schemas.CreateUser, db: Session = Depends(get_db)) -> Any:
-    # hash the password
     user.password = utils.hash_password(user.password)
-
     new_user = models.Users(**user.model_dump())
     db.add(new_user)
     db.commit()
@@ -28,7 +26,5 @@ async def create_user(user: schemas.CreateUser, db: Session = Depends(get_db)) -
 async def get_user(user_id: int, db: Session = Depends(get_db)) -> Any:
     user = db.get(models.Users, user_id)
     if not user:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
-                            detail="Item not found",
-                            headers={"X-Error": "There goes my error"})
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Item not found")
     return user

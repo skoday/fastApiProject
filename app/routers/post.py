@@ -27,21 +27,22 @@ async def get_posts(db: Session = Depends(get_db),
                     current_user: models.Users = Depends(oauth2.get_current_user)):
     posts = db.execute(select(models.Posts)).scalars().all()
     if not posts:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
-                            detail="There are no posts available",
-                            headers={"X-Error": "There goes my error"})
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="There are no posts available")
     return posts
 
 
 @router.get("/me", response_model=list[schemas.PostResponse])
 async def my_posts(current_user: models.Users = Depends(oauth2.get_current_user),
                    db: Session = Depends(get_db), limit: int = 10, skip: int = 0, search: str | None = "") -> Any:
-    posts = db.execute(select(models.Posts).where(models.Posts.user_id == literal(current_user.id)
-                                                  & models.Posts.title.contains(search)).offset(skip).limit(limit)).scalars().all()
-    # posts = current_user.posts
+
+    posts = db.execute(
+                        select(models.Posts).where(models.Posts.user_id == current_user.id)
+                        .where(models.Posts.title.contains(search))
+                        .offset(skip).limit(limit)
+                       ).scalars().all()
     if not posts:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
-                            detail="There are no posts available")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="There are no posts available")
+    print(posts)
     return posts
 
 
@@ -50,11 +51,9 @@ async def get_post(post_id: int, db: Session = Depends(get_db),
                    current_user: models.Users = Depends(oauth2.get_current_user)) -> Any:
     r = db.get(models.Posts, post_id)
     if not r:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
-                            detail="Item not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,  detail="Item not found")
     if r.user_id != current_user.id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
-                            detail="You are not allowed to be here")
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You are not allowed to be here")
     return r
 
 
@@ -63,13 +62,10 @@ async def delete_post(post_id: int, db: Session = Depends(get_db),
                       current_user: models.Users = Depends(oauth2.get_current_user)):
     r = db.get(models.Posts, post_id)
     if not r:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
-                            detail="Item not found",
-                            headers={"X-Error": "There goes my error"})
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Item not found")
 
     if r.user_id != current_user.id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
-                            detail="You are not allowed to delete this post")
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You are not allowed to delete this post")
 
     db.delete(r)
     db.commit()
@@ -83,8 +79,7 @@ async def update_post(post_id: int, updated_post: schemas.PostCreate, db: Sessio
     if not post:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Item not found")
     if post.user_id != current_user.id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
-                            detail="You are not allowed to modify this post")
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You are not allowed to modify this post")
 
     db.execute(update(models.Posts).where(models.Posts.id == literal(post_id)).values(**updated_post.model_dump()))
     db.commit()
