@@ -4,8 +4,16 @@ from sqlalchemy.orm import DeclarativeBase
 from datetime import datetime
 from app.config import settings
 
-SQLALCHEMY_DATABASE_URL = f"mysql+mysqlconnector://{settings.database_username}:{settings.database_password}@\
-                                {settings.database_hostname}:{settings.database_port}/{settings.database_name}"
+
+DATABASE_USERNAME = settings.database_username
+DATABASE_PASSWORD = settings.database_password
+DATABASE_HOSTNAME = settings.database_hostname
+DATABASE_PORT = settings.database_port
+DATABASE_NAME = settings.database_name
+
+
+SQLALCHEMY_DATABASE_URL = f"mysql+mysqlconnector://{DATABASE_USERNAME}:{DATABASE_PASSWORD}@\
+                                {DATABASE_HOSTNAME}:{DATABASE_PORT}/{DATABASE_NAME}"
 
 engine = create_engine(
     SQLALCHEMY_DATABASE_URL
