@@ -1,6 +1,6 @@
 # RESTful API with FastAPI, SQLAlchemy and MySQL
 
-This repository implements a RESTful service with elemental **CRUD** operations. The idea behind this repository is to be able to create users and let them create posts, this is achieved using two entites:
+This repository implements a RESTful service with elemental **CRUD** operations. The idea behind this repository is to be able to create users and let them create posts, this is achieved using two entities:
 
 - Users
 
@@ -50,10 +50,8 @@ Some of the plus features you can find here are:
 - Schemas for responses
 - HTTP status and exceptions implemented
 - DB models
-- Environmente variables verfication with pydantic
+- Environment variables verification with pydantic
 
-Even though this API has a considerable amount of features it is still incomplete, yet it is fully functional at this point, an json for Insomnia will be leaved in other branch si that this can be used without any problems.
+Even though this API has a considerable amount of features it is incomplete, yet it is fully functional at this point.
 
-As for libraries versions there is no requierements file as this is still incomplete, but it uses SQLAlchemy 2, python 12 and FastAPI 0.112.1.
-
-This API is intended to be done in a few days, possibly weeks, with tests included etc etc etc etc...
+Update, a voting system so express agreement with a posts has been implemented. This was made through a many to many relationship.
