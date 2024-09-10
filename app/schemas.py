@@ -1,5 +1,6 @@
 from pydantic import BaseModel, EmailStr
 from datetime import datetime
+from app import votes_enum
 
 
 class PostBase(BaseModel):
@@ -42,3 +43,11 @@ class Token(BaseModel):
 
 class TokenData(BaseModel):
     user_id: int | None = None
+
+
+class Vote(BaseModel):
+    dir: votes_enum.VoteDirection
+
+
+class CreateVote(Vote):
+    post_id: int

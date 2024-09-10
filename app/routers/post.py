@@ -42,7 +42,6 @@ async def my_posts(current_user: models.Users = Depends(oauth2.get_current_user)
                        ).scalars().all()
     if not posts:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="There are no posts available")
-    print(posts)
     return posts
 
 
